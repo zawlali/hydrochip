@@ -2,8 +2,8 @@
 #define BLYNK_TEMPLATE_NAME "Hydrochip"
 #define BLYNK_AUTH_TOKEN "5WwS6hOo26gXnQjY0qgfGXMzoiPKs6o4"
 
-#define WF_SSID "Home"
-#define PASS "4d8h5e5e"
+#define WF_SSID "OPPO_8E9986_2.4G"
+#define PASS "UEPFE4Vd"
 #define MOIST_PIN 36
 #define HUMID_PIN 32
 #define WATER_PIN 25
