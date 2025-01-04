@@ -20,34 +20,37 @@
 #include <DHT_U.h>
 #include <Adafruit_Sensor.h>
 
+// Global objects & variables
 BlynkTimer timer;
 
 DHT_Unified dht(HUMID_PIN, DHT11);
 
 sensor_t dht_sensor;
 
+//Irrigation
 int dryness = 0;
 int moisture = 0;
 double moisture_pg = 0.0;
 double moisture_thresh = 70.0;
-
 int water_time = 6000;
 bool water_manual = false;
 
+//Spray
 double humidity = 0.0;
 double humidity_thresh = 70.0;
 double humidity_pg = 0.0;
-
 double temperature = 0.0;
-
 int spray_time = 1000;
 bool spray_manual = false;
 
 void dataProc() {
+
+  //Moisture sensor readings
   dryness = analogRead(MOIST_PIN);
   moisture = 4095 - dryness;
   moisture_pg = static_cast<double>(moisture) * 100 / 4095.0; 
 
+  //DHT11 sensor readings [temp & humidity sensor]
   sensors_event_t event;
   dht.temperature().getEvent(&event);
   if (isnan(event.temperature)) {
@@ -69,7 +72,7 @@ void dataProc() {
     Serial.print(F("Humidity: "));
     Serial.print(humidity);
     Serial.println(F("%"));
-  }
+  } 
 
   Serial.print("MoisturePG: ");
   Serial.print(moisture_pg);
@@ -108,7 +111,7 @@ void sprayPlants() {
     digitalWrite(PUMP_PIN, HIGH);
     Serial.println("Spraying plants!");
     Blynk.virtualWrite(V8, true);
-    delay(spray_time);
+    delay(8000); //replace this
     digitalWrite(SPRAY_PIN, LOW);
     digitalWrite(PUMP_PIN, LOW);
     Blynk.virtualWrite(V8, false);
@@ -117,12 +120,14 @@ void sprayPlants() {
   }
 }
 
+//V3: Moisture threshold
 BLYNK_WRITE(V3) {
   moisture_thresh = param.asDouble();
   Serial.print("New moisture threshold set to: ");
   Serial.println(moisture_thresh);
 }
 
+//V4: Trigger irrigation manually/Irrigation status
 BLYNK_WRITE(V4) {
   water_manual = static_cast<bool>(param.asInt());
   Serial.print("Manual trigger received: ");
@@ -130,23 +135,28 @@ BLYNK_WRITE(V4) {
   waterPlants();
 }
 
+//V5: Duration of irrigation
 BLYNK_WRITE(V5) {
   water_time = param.asInt() * 1000;
   Serial.print("New water time set to: ");
   Serial.println(water_time);
 }
 
+//V6: Humidity threshold
 BLYNK_WRITE(V6) {
   humidity_thresh = param.asInt();
   Serial.print("New humidity threshold set to: ");
   Serial.println(humidity_thresh);
 }
+
+//V7: Duration of spray
 BLYNK_WRITE(V7) {
   spray_time = param.asInt() * 1000;
   Serial.print("New spray time set to: ");
   Serial.println(spray_time);
 }
 
+//V8: Trigger spray manually/Spray status
 BLYNK_WRITE(V8) {
   spray_manual = static_cast<bool>(param.asInt());
   Serial.print("Manual trigger received: ");
@@ -157,6 +167,8 @@ BLYNK_WRITE(V8) {
 void setup() {
   // Debug console
   Serial.begin(115200);
+
+  //Pin setup
   pinMode(MOIST_PIN, INPUT);
   pinMode(WATER_PIN, OUTPUT);
   pinMode(SPRAY_PIN, OUTPUT);
@@ -189,6 +201,7 @@ void setup() {
   timer.setInterval(60000L, sendBlynk);
   timer.setInterval(300000L, waterPlants);
 
+  //OTA setup
   ArduinoOTA.setHostname("hydrochip");
   ArduinoOTA.setPort(3232); 
 
@@ -217,31 +230,12 @@ void setup() {
         });
 
     ArduinoOTA.begin();
-    Serial.println("Ready");
+    Serial.println("OTA Ready");
 
+    //DHT11 sensor initialization
     dht.begin();
 
-    dht.temperature().getSensor(&dht_sensor);
-    Serial.println(F("------------------------------------"));
-    Serial.println(F("Temperature Sensor"));
-    Serial.print  (F("Sensor Type: ")); Serial.println(dht_sensor.name);
-    Serial.print  (F("Driver Ver:  ")); Serial.println(dht_sensor.version);
-    Serial.print  (F("Unique ID:   ")); Serial.println(dht_sensor.sensor_id);
-    Serial.print  (F("Max Value:   ")); Serial.print(dht_sensor.max_value); Serial.println(F("°C"));
-    Serial.print  (F("Min Value:   ")); Serial.print(dht_sensor.min_value); Serial.println(F("°C"));
-    Serial.print  (F("Resolution:  ")); Serial.print(dht_sensor.resolution); Serial.println(F("°C"));
-    Serial.println(F("------------------------------------"));
-    // Print humidity sensor details.
-    dht.humidity().getSensor(&dht_sensor);
-    Serial.println(F("Humidity Sensor"));
-    Serial.print  (F("Sensor Type: ")); Serial.println(dht_sensor.name);
-    Serial.print  (F("Driver Ver:  ")); Serial.println(dht_sensor.version);
-    Serial.print  (F("Unique ID:   ")); Serial.println(dht_sensor.sensor_id);
-    Serial.print  (F("Max Value:   ")); Serial.print(dht_sensor.max_value); Serial.println(F("%"));
-    Serial.print  (F("Min Value:   ")); Serial.print(dht_sensor.min_value); Serial.println(F("%"));
-    Serial.print  (F("Resolution:  ")); Serial.print(dht_sensor.resolution); Serial.println(F("%"));
-    Serial.println(F("------------------------------------"));
-
+    //Write to Blynk, default starting values
     Blynk.virtualWrite(V3, moisture_thresh);
     Blynk.virtualWrite(V5, water_time / 1000);
     Blynk.virtualWrite(V6, humidity_thresh);
